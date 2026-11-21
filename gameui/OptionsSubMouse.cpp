@@ -96,6 +96,23 @@ COptionsSubMouse::COptionsSubMouse(vgui::Panel *parent) : PropertyPage(parent, N
 
 	LoadControlSettings("Resource\\OptionsSubMouse.res");
 
+	// HL2 20th Anniversary moved controller settings to gamepadui, so its
+	// OptionsSubMouse.res no longer lays out the joystick controls and they
+	// pile up in the top-left corner. Hide the ones the layout didn't place.
+	vgui::Panel *pJoystickPanels[] =
+	{
+		m_pJoystickCheckBox, m_pJoystickSouthpawCheckBox, m_pReverseJoystickCheckBox,
+		m_pJoyYawSensitivitySlider, m_pJoyYawSensitivityPreLabel,
+		m_pJoyPitchSensitivitySlider, m_pJoyPitchSensitivityPreLabel,
+	};
+	for ( int i = 0; i < ARRAYSIZE( pJoystickPanels ); i++ )
+	{
+		int x, y;
+		pJoystickPanels[i]->GetPos( x, y );
+		if ( x == 0 && y == 0 )
+			pJoystickPanels[i]->SetVisible( false );
+	}
+
 	UpdateSensitivityLabel();
 	UpdateAccelerationLabel();
 

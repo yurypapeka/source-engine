@@ -128,6 +128,19 @@ void PropertyDialog::PerformLayout()
 		iTallIndent = scheme()->GetProportionalScaledValueEx(GetScheme(), iTallIndent);
 	}
 
+	// Widen the buttons if a localized label doesn't fit (e.g. Russian "Применить").
+	Button *pButtons[] = { _applyButton, _cancelButton, _okButton };
+	for ( int i = 0; i < ARRAYSIZE( pButtons ); i++ )
+	{
+		if ( !pButtons[i] || !pButtons[i]->IsVisible() )
+			continue;
+
+		int nContentWide, nContentTall;
+		pButtons[i]->GetContentSize( nContentWide, nContentTall );
+		if ( nContentWide + 4 > iBtnWide )
+			iBtnWide = nContentWide + 4;
+	}
+
 	// move the buttons to the bottom-right corner
 	int xpos = x + wide - iBtnWide - iWideIndent;
 	int ypos = tall + y - iBtnTall - iTallIndent;
