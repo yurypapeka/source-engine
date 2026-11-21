@@ -1500,7 +1500,23 @@ void	GLMDisplayInfo::PopulateModes( void )
 {
 	Assert( !m_modes );
 	m_modes = new CUtlVector< GLMDisplayMode* >;
-	
+
+	// Proportions of the whole display in its current mode. Fullscreen covers the
+	// whole display (around a MacBook's camera housing too, see CSDLMgr::Init), so
+	// only modes with these proportions are offered: a MacBook also lists 16:10 modes
+	// for the area below the notch (e.g. 1470x918 next to 1470x956), which would be
+	// stretched.
+	double flDisplayAspect = 0.0;
+	{
+		CGDisplayModeRef curDisplayMode = CGDisplayCopyDisplayMode( m_info.m_cgDisplayID );
+		if ( curDisplayMode )
+		{
+			if ( CGDisplayModeGetHeight( curDisplayMode ) > 0 )
+				flDisplayAspect = (double)CGDisplayModeGetWidth( curDisplayMode ) / (double)CGDisplayModeGetHeight( curDisplayMode );
+			CGDisplayModeRelease( curDisplayMode );
+		}
+	}
+
 	CFArrayRef		modeList;
 //	CGDisplayErr	cgderr;
 	CFDictionaryRef cgvidmode;
@@ -1554,8 +1570,10 @@ void	GLMDisplayInfo::PopulateModes( void )
 				CFNumberGetValue( number, kCFNumberDoubleType, &flrefreshrate );
 				refreshrate = (int)flrefreshrate;
 
-				// exclude silly small modes
-				if ( (modeHeight >= 384) && (modeWidth >= 512) )
+				// exclude silly small modes, and modes with other proportions than the display
+				const bool bDisplayProportions = ( flDisplayAspect <= 0.0 ) ||
+					( fabs( (double)modeWidth / (double)modeHeight - flDisplayAspect ) <= flDisplayAspect * 0.01 );
+				if ( (modeHeight >= 384) && (modeWidth >= 512) && bDisplayProportions )
 				{
 					GLMDisplayMode *newmode = new GLMDisplayMode( modeWidth, modeHeight, refreshrate );
 					m_modes->AddToTail( newmode );
@@ -1594,8 +1612,22 @@ void	GLMDisplayInfo::PopulateModes( void )
 			for ( int i = 0; i < (int)ARRAYSIZE( s_nHiDPIWidths ) + 1; i++ )
 			{
 				const long w = ( i < (int)ARRAYSIZE( s_nHiDPIWidths ) ) ? s_nHiDPIWidths[i] : pixelWidth;
-				const long h = ( i < (int)ARRAYSIZE( s_nHiDPIWidths ) ) ? ( ( w * pointHeight / pointWidth ) & ~1L ) : pixelHeight;
+				// nearest even height with the display's proportions (matches macOS' own modes, e.g. 2048x1332)
+				const long h = ( i < (int)ARRAYSIZE( s_nHiDPIWidths ) ) ? 2 * (long)floor( (double)w * pointHeight / pointWidth / 2.0 + 0.5 ) : pixelHeight;
 				if ( w <= pointWidth || w > pixelWidth || ( w == pixelWidth && i < (int)ARRAYSIZE( s_nHiDPIWidths ) ) )
+					continue;
+
+				// skip widths macOS already lists (e.g. 2048x1332, 2560x1664)
+				bool bListed = false;
+				FOR_EACH_VEC( *m_modes, j )
+				{
+					if ( (long)(*m_modes)[j]->m_info.m_modePixelWidth == w )
+					{
+						bListed = true;
+						break;
+					}
+				}
+				if ( bListed )
 					continue;
 
 				m_modes->AddToTail( new GLMDisplayMode( w, h, refreshRate ) );
