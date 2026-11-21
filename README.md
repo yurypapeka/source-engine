@@ -1,4 +1,7 @@
 # Source Engine
+
+> **Half-Life 2 20th Anniversary on macOS (Apple Silicon):** see
+> [README_MACOS_HL2_ANNIVERSARY.md](README_MACOS_HL2_ANNIVERSARY.md) (in Russian).
 [![GitHub Actions Status](https://github.com/nillerusr/source-engine/actions/workflows/build.yml/badge.svg)](https://github.com/nillerusr/source-engine/actions/workflows/build.yml) [![GitHub Actions Status](https://github.com/nillerusr/source-engine/actions/workflows/tests.yml/badge.svg)](https://github.com/nillerusr/source-engine/actions/workflows/tests.yml)
  Discord: [![Discord Server](https://img.shields.io/discord/672055862608658432.svg)](https://discord.gg/hZRB7WMgGw)
  
