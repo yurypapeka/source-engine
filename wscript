@@ -577,6 +577,11 @@ def configure(conf):
 	if conf.env.DEST_OS != 'win32':
 		cxxflags += ['-std=c++11','-fpermissive']
 
+	if conf.env.DEST_OS == 'darwin':
+		# Newer macOS SDKs no longer pull <alloca.h> in through <stdlib.h>,
+		# but ivp calls alloca() without including it on Apple platforms.
+		cxxflags += ['-include', 'alloca.h']
+
 	if conf.env.COMPILER_CC == 'gcc':
 		conf.define('COMPILER_GCC', 1)
 	elif conf.env.COMPILER_CC == 'msvc':
