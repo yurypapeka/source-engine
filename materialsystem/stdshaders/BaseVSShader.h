@@ -429,6 +429,20 @@ FORCEINLINE void InitIntParam( int nIndex, IMaterialVar **params, int nValue )
 }
 
 
+//-----------------------------------------------------------------------------
+// PIXELFOGTYPE for shaders built with the HL2 20th Anniversary combo layout
+// (range 0..2): upgrades range fog (0) to radial range fog (2) when the view
+// asked for it. Fog parameters are shared, so with fog disabled the rigged
+// range-fog constants still yield zero fog.
+//-----------------------------------------------------------------------------
+inline int GetPixelFogComboRadial( IShaderDynamicAPI *pShaderAPI )
+{
+	int nCombo = pShaderAPI->GetPixelFogCombo();
+	if ( nCombo == 0 && pShaderAPI->GetIntRenderingParameter( INT_RENDERPARM_FOG_RADIAL ) )
+		return 2;
+	return nCombo;
+}
+
 class ConVar;
 
 #ifdef _DEBUG

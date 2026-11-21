@@ -52,6 +52,10 @@ enum RenderParamInt_t
 
 	INT_RENDERPARM_BACK_BUFFER_INDEX,
 
+	// Non-zero when the current view uses radial (true distance) range fog
+	// (env_fog_controller "fogradial", HL2 20th Anniversary maps).
+	INT_RENDERPARM_FOG_RADIAL,
+
 	MAX_INT_RENDER_PARMS = 20
 };
 

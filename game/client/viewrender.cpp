@@ -139,6 +139,8 @@ static ConVar fog_maxdensityskybox( "fog_maxdensityskybox", "-1", FCVAR_CHEAT );
 static ConVar fog_colorskybox( "fog_colorskybox", "-1 -1 -1", FCVAR_CHEAT );
 static ConVar fog_enableskybox( "fog_enableskybox", "1", FCVAR_CHEAT );
 static ConVar fog_maxdensity( "fog_maxdensity", "-1", FCVAR_CHEAT );
+static ConVar fog_radial( "fog_radial", "-1", FCVAR_CHEAT );
+static ConVar fog_radialskybox( "fog_radialskybox", "-1", FCVAR_CHEAT );
 
 
 //-----------------------------------------------------------------------------
@@ -1631,6 +1633,26 @@ static float GetFogMaxDensity( fogparams_t *pFogParams )
 		return pFogParams->maxdensity;
 }
 
+// Radial fog ("fogradial" on env_fog_controller): fog by true distance from the
+// eye instead of view depth. Consumed by shaders via INT_RENDERPARM_FOG_RADIAL.
+static bool GetFogRadial( fogparams_t *pFogParams )
+{
+	if ( cl_leveloverview.GetFloat() > 0 )
+		return false;
+
+	// Ask the clientmode
+	if ( !g_pClientMode->ShouldDrawFog() )
+		return false;
+
+	if ( fog_override.GetInt() && fog_radial.GetInt() != -1 )
+		return fog_radial.GetBool();
+
+	if ( !pFogParams )
+		return false;
+
+	return pFogParams->radial;
+}
+
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns the skybox fog color to use in rendering the current frame.
@@ -1760,6 +1782,27 @@ static float GetSkyboxFogMaxDensity()
 	}
 	else
 		return local->m_skybox3d.fog.maxdensity;
+}
+
+static bool GetSkyboxFogRadial()
+{
+	C_BasePlayer *pbp = C_BasePlayer::GetLocalPlayer();
+	if ( !pbp )
+		return false;
+
+	CPlayerLocalData *local = &pbp->m_Local;
+
+	if ( cl_leveloverview.GetFloat() > 0 )
+		return false;
+
+	// Ask the clientmode
+	if ( !g_pClientMode->ShouldDrawFog() )
+		return false;
+
+	if ( fog_override.GetInt() && fog_radialskybox.GetInt() != -1 )
+		return fog_radialskybox.GetBool();
+
+	return local->m_skybox3d.fog.radial;
 }
 
 
@@ -4556,10 +4599,12 @@ void CRendering3dView::EnableWorldFog( void )
 		pRenderContext->FogStart( GetFogStart( pFogParams ) );
 		pRenderContext->FogEnd( GetFogEnd( pFogParams ) );
 		pRenderContext->FogMaxDensity( GetFogMaxDensity( pFogParams ) );
+		pRenderContext->SetIntRenderingParameter( INT_RENDERPARM_FOG_RADIAL, GetFogRadial( pFogParams ) ? 1 : 0 );
 	}
 	else
 	{
 		pRenderContext->FogMode( MATERIAL_FOG_NONE );
+		pRenderContext->SetIntRenderingParameter( INT_RENDERPARM_FOG_RADIAL, 0 );
 	}
 }
 
@@ -4663,10 +4708,12 @@ void CSkyboxView::Enable3dSkyboxFog( void )
 		pRenderContext->FogStart( GetSkyboxFogStart() * scale );
 		pRenderContext->FogEnd( GetSkyboxFogEnd() * scale );
 		pRenderContext->FogMaxDensity( GetSkyboxFogMaxDensity() );
+		pRenderContext->SetIntRenderingParameter( INT_RENDERPARM_FOG_RADIAL, GetSkyboxFogRadial() ? 1 : 0 );
 	}
 	else
 	{
 		pRenderContext->FogMode( MATERIAL_FOG_NONE );
+		pRenderContext->SetIntRenderingParameter( INT_RENDERPARM_FOG_RADIAL, 0 );
 	}
 }
 

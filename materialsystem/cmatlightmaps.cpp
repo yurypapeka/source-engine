@@ -117,7 +117,9 @@ int CMatLightmaps::GetMaxLightmapPageWidth() const
 
 	// We need to go to 512x256 textures because that's the only way bumped
 	// lighting on displacements can work given the 128x128 allowance..
-	int nWidth = 512;
+	// HL2 20th Anniversary shaders sample lightmaps bicubically and hardcode
+	// a 1024x512 page size, so every page must be exactly that big.
+	int nWidth = 1024;
 	if ( nWidth > HardwareConfig()->MaxTextureWidth() )
 		nWidth = HardwareConfig()->MaxTextureWidth();
 
@@ -129,7 +131,7 @@ int CMatLightmaps::GetMaxLightmapPageWidth() const
 //-----------------------------------------------------------------------------
 int CMatLightmaps::GetMaxLightmapPageHeight() const
 {
-	int nHeight = 256;
+	int nHeight = 512;
 
 	if ( nHeight > HardwareConfig()->MaxTextureHeight() )
 		nHeight = HardwareConfig()->MaxTextureHeight();
@@ -409,9 +411,10 @@ void CMatLightmaps::EndLightmapAllocation()
 	for ( i = 0; i < GetNumLightmapPages(); i++ )
 	{
 		// Compute lightmap dimensions
-		bool lastStaticLightmap = ( i == (m_firstDynamicLightmap-1));
-		m_pLightmapPages[i].m_Width = (unsigned short)(lastStaticLightmap ? lastLightmapPageWidth : GetMaxLightmapPageWidth());
-		m_pLightmapPages[i].m_Height = (unsigned short)(lastStaticLightmap ? lastLightmapPageHeight : GetMaxLightmapPageHeight());
+		// Keep the last page full size too: the bicubic lightmap shader assumes
+		// every page has the same fixed dimensions.
+		m_pLightmapPages[i].m_Width = (unsigned short)GetMaxLightmapPageWidth();
+		m_pLightmapPages[i].m_Height = (unsigned short)GetMaxLightmapPageHeight();
 		m_pLightmapPages[i].m_Flags = 0;
 
 		AllocateLightmapTexture( i );
