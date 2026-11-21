@@ -390,6 +390,8 @@ private:
 	float m_flMouseXScale;
 	float m_flMouseYScale;
 
+	void UpdateMouseScale();
+
 	// !!! FIXME: can we rename these from "Cocoa"?
 	CThreadMutex m_CocoaEventsMutex;					// use for either queue below
 	CUtlLinkedList<CCocoaEvent,int> m_CocoaEvents;
@@ -1088,7 +1090,32 @@ void CSDLMgr::SetCursorPosition( int x, int y )
 
 	// x/y are in rendered pixels; the window works in its own (point) coordinates.
 	// Inverse of the scaling applied to SDL_MOUSEMOTION events.
+	UpdateMouseScale();
 	SDL_WarpMouseInWindow(m_Window, (int)( x / m_flMouseXScale ), (int)( y / m_flMouseYScale ));
+}
+
+//-----------------------------------------------------------------------------
+// Map window coordinates to rendered pixels from the window's actual size.
+// On a MacBook with a camera housing ("notch") a desktop-fullscreen window is
+// shorter than the display (e.g. 1470x923 vs 1470x956 points) and the rendered
+// frame is stretched over the window, so scaling by the desktop mode put the
+// cursor progressively too high. The size also changes during the fullscreen
+// transition, hence computing it when mouse events come in.
+//-----------------------------------------------------------------------------
+void CSDLMgr::UpdateMouseScale()
+{
+#ifdef OSX
+	if ( !m_Window || !m_renderedWidth || !m_rendererHeight )
+		return;
+
+	int nWindowWidth = 0, nWindowHeight = 0;
+	SDL_GetWindowSize( m_Window, &nWindowWidth, &nWindowHeight );
+	if ( nWindowWidth <= 0 || nWindowHeight <= 0 )
+		return;
+
+	m_flMouseXScale = ( float )m_renderedWidth / ( float )nWindowWidth;
+	m_flMouseYScale = ( float )m_rendererHeight / ( float )nWindowHeight;
+#endif
 }
 
 void CSDLMgr::PostEvent( const CCocoaEvent &theEvent, bool debugEvent )
@@ -1805,6 +1832,8 @@ void CSDLMgr::PumpWindowsMessageLoop()
 					m_bExpectSyntheticMouseMotion = true;
 				}
 
+				UpdateMouseScale();
+
 				CCocoaEvent theEvent;
 				theEvent.m_EventType = CocoaEvent_MouseMove;
 				theEvent.m_MousePos[0] = event.motion.x * m_flMouseXScale;
@@ -1880,6 +1909,8 @@ void CSDLMgr::PumpWindowsMessageLoop()
 						m_bGotMouseButtonDown = true;
 					}
 				}
+
+				UpdateMouseScale();
 
 				CCocoaEvent theEvent;
 				theEvent.m_EventType = (bPressed) ? CocoaEvent_MouseButtonDown : CocoaEvent_MouseButtonUp;
