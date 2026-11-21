@@ -2232,14 +2232,17 @@ bool EvaluateConditional( const char *str )
 	if ( Q_stristr( str, "$WIN32" ) )
 		return IsPC() ^ bNot; // hack hack - for now WIN32 really means IsPC
 
+	// OSX lays fonts out like Windows GDI (see CLinuxFont::CreateFromMemory), so it
+	// takes the Windows font variants of the schemes (these conditionals are only
+	// used there) rather than the Linux ones, which were sized for the old metrics.
 	if ( Q_stristr( str, "$WINDOWS" ) )
-		return IsWindows() ^ bNot;
+		return ( IsWindows() || IsOSX() ) ^ bNot;
 
 	if ( Q_stristr( str, "$OSX" ) )
 		return bNot;
 
 	if ( Q_stristr( str, "$LINUX" ) )
-		return ( IsLinux() || IsBSD() || IsOSX() ) ^ bNot;
+		return ( IsLinux() || IsBSD() ) ^ bNot;
 
 	if ( Q_stristr( str, "$POSIX" ) )
 		return IsPosix() ^ bNot;

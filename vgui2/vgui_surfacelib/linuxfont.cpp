@@ -24,6 +24,7 @@
 #include <fontconfig/fontconfig.h>
 #endif
 #include <freetype/ftbitmap.h>
+#include FT_TRUETYPE_TABLES_H
 #include "materialsystem/imaterialsystem.h"
 
 #include "vgui_surfacelib/FontManager.h"
@@ -259,6 +260,35 @@ bool CLinuxFont::CreateFromMemory(const char *windowsFontName, void *data, int d
 	}
 
 	m_iHeightRequested = m_iTall;
+
+#ifdef OSX
+	// Lay fonts out like Windows GDI, which the VGUI .res layouts were made for:
+	// a font "tall" of N is a cell of N pixels made of usWinAscent + usWinDescent.
+	// The bbox-based search below leaves a lot of empty space under fonts with a
+	// large glyph repertoire (e.g. Verdana, used for the OSX schemes), so text is
+	// rendered too small and sits too high in buttons, tabs and labels.
+	{
+		TT_OS2 *pOS2 = (TT_OS2 *)FT_Get_Sfnt_Table( m_face, FT_SFNT_OS2 );
+		const int nCellUnits = pOS2 ? ( pOS2->usWinAscent + pOS2->usWinDescent ) : 0;
+		if ( nCellUnits > 0 && FT_IS_SCALABLE( m_face ) )
+		{
+			const FT_F26Dot6 emSize = (FT_F26Dot6)( (double)m_iTall * m_face->units_per_EM * 64.0 / nCellUnits + 0.5 );
+			if ( FT_Set_Char_Size( m_face, 0, emSize, 72, 72 ) == 0 )
+			{
+				const FT_Pos ascender = FT_MulFix( pOS2->usWinAscent, m_face->size->metrics.y_scale );
+				const FT_Pos descender = FT_MulFix( pOS2->usWinDescent, m_face->size->metrics.y_scale );
+
+				m_iHeightRequested = FIXED6_2INT( emSize );
+				m_iAscent = FIXED6_2INT( ascender );
+				m_iMaxCharWidth = FIXED6_2INT( m_face->size->metrics.max_advance );
+				m_iHeight = FIXED6_2INT( ascender + descender ) + m_iDropShadowOffset + 2 * m_iOutlineSize;
+
+				m_faceValid = true;
+				return true;
+			}
+		}
+	}
+#endif
 
 	// Loop through until we get a height that is less than or equal to the requested height.
 	//  We tried using the BBOX ascender / descender, but it was overly large compared to Windows.
@@ -503,9 +533,13 @@ char *CLinuxFont::GetFontFileName( const char *windowsFontName, int flags )
 	bool bBold = false;
 	const char *pchFontName = windowsFontName;
 
+#ifndef OSX
+	// macOS ships Tahoma (the Windows UI font the layouts were made for); keep it there.
 	if ( !Q_stricmp( pchFontName, "Tahoma" ) )
 		pchFontName = "Bitstream Vera Sans";
-	else if ( !Q_stricmp( pchFontName, "Arial Black" ) || Q_stristr( pchFontName, "bold" ) )
+	else
+#endif
+	if ( !Q_stricmp( pchFontName, "Arial Black" ) || Q_stristr( pchFontName, "bold" ) )
 		bBold = true;
 
 #if !HAVE_FC
