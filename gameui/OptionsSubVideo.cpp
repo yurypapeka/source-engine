@@ -1229,8 +1229,10 @@ void COptionsSubVideo::PrepareResolutionList()
 	int selectedItemID = -1;
 	for (int i = 0; i < count; i++, plist++)
 	{
-#if !defined( USE_SDL )
+#if !defined( USE_SDL ) || defined( OSX )
 		// don't show modes bigger than the desktop for windowed mode
+		// (OSX fullscreen renders offscreen and scales to the HiDPI backbuffer,
+		//  so pixel resolutions above the desktop point size are usable there)
 		if ( bWindowed )
 #endif
 		{

@@ -406,6 +406,26 @@ static T OverrideVideoConfigFromCommandLine( const char *pCVarName, T curVal )
 	return curVal;
 }
 
+#if defined( OSX ) && !defined( SWDS )
+//-----------------------------------------------------------------------------
+// HiDPI (Retina): fullscreen renders offscreen and is scaled to the real-pixel
+// backbuffer, so it may go above the desktop resolution (which is in points) up
+// to the largest mode the display offers (see GLMDisplayInfo::PopulateModes).
+//-----------------------------------------------------------------------------
+static void GrowToLargestFullscreenMode( int &nWidth, int &nHeight )
+{
+	int nAdapter = materials->GetCurrentAdapter();
+	int nModeCount = materials->GetModeCount( nAdapter );
+	for ( int i = 0; i < nModeCount; i++ )
+	{
+		MaterialVideoMode_t mode;
+		materials->GetModeInfo( nAdapter, i, mode );
+		nWidth = MAX( nWidth, mode.m_Width );
+		nHeight = MAX( nHeight, mode.m_Height );
+	}
+}
+#endif
+
 //-----------------------------------------------------------------------------
 // Reads convars from the registry
 //-----------------------------------------------------------------------------
@@ -433,6 +453,10 @@ static void ReadMaterialSystemConfigFromRegistry( MaterialSystem_Config_t &confi
 		SDL_Rect rect;
 		if ( !SDL_GetDisplayBounds( displayIndex, &rect ) )
 		{
+#ifdef OSX
+			if ( !config.Windowed() )
+				GrowToLargestFullscreenMode( rect.w, rect.h );
+#endif
 			if ( ( config.m_VideoMode.m_Width > rect.w ) || ( config.m_VideoMode.m_Height > rect.h ) )
 			{
 				config.m_VideoMode.m_Width = rect.w;
@@ -668,6 +692,10 @@ static void OverrideMaterialSystemConfigFromCommandLine( MaterialSystem_Config_t
 	// Clamp the requested dimensions to the display resolution
 	MaterialVideoMode_t videoMode;
 	materials->GetDisplayMode( videoMode );
+#if defined( OSX ) && !defined( SWDS )
+	if ( !config.Windowed() )
+		GrowToLargestFullscreenMode( videoMode.m_Width, videoMode.m_Height );
+#endif
 	config.m_VideoMode.m_Width = MIN( videoMode.m_Width, config.m_VideoMode.m_Width );
 	config.m_VideoMode.m_Height = MIN( videoMode.m_Height, config.m_VideoMode.m_Height );
 

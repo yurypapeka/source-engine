@@ -1564,6 +1564,45 @@ void	GLMDisplayInfo::PopulateModes( void )
 		}
 	}
 	
+	// HiDPI (Retina): the modes above are in points (e.g. 1470x956 on a 13" MacBook Air)
+	// while the backbuffer is in real pixels (2940x1912 there). Offer pixel resolutions
+	// above the point size as well: fullscreen renders offscreen at the chosen size and
+	// the frame is scaled to the Retina backbuffer on present.
+	CGDisplayModeRef curMode = CGDisplayCopyDisplayMode( m_info.m_cgDisplayID );
+	if ( curMode )
+	{
+		const long pointWidth = (long)CGDisplayModeGetWidth( curMode );
+		const long pointHeight = (long)CGDisplayModeGetHeight( curMode );
+		const long pixelWidth = (long)CGDisplayModeGetPixelWidth( curMode );
+		const long pixelHeight = (long)CGDisplayModeGetPixelHeight( curMode );
+		long refreshRate = (long)CGDisplayModeGetRefreshRate( curMode );
+		CGDisplayModeRelease( curMode );
+
+		// group the new modes with the desktop mode's refresh rate as listed above
+		FOR_EACH_VEC( *m_modes, i )
+		{
+			if ( (long)(*m_modes)[i]->m_info.m_modePixelWidth == pointWidth && (long)(*m_modes)[i]->m_info.m_modePixelHeight == pointHeight )
+			{
+				refreshRate = (*m_modes)[i]->m_info.m_modeRefreshHz;
+				break;
+			}
+		}
+
+		if ( pointWidth > 0 && pointHeight > 0 && pixelWidth > pointWidth )
+		{
+			static const long s_nHiDPIWidths[] = { 1600, 1920, 2048, 2304, 2560, 2880, 3200, 3840, 4096, 5120 };
+			for ( int i = 0; i < (int)ARRAYSIZE( s_nHiDPIWidths ) + 1; i++ )
+			{
+				const long w = ( i < (int)ARRAYSIZE( s_nHiDPIWidths ) ) ? s_nHiDPIWidths[i] : pixelWidth;
+				const long h = ( i < (int)ARRAYSIZE( s_nHiDPIWidths ) ) ? ( ( w * pointHeight / pointWidth ) & ~1L ) : pixelHeight;
+				if ( w <= pointWidth || w > pixelWidth || ( w == pixelWidth && i < (int)ARRAYSIZE( s_nHiDPIWidths ) ) )
+					continue;
+
+				m_modes->AddToTail( new GLMDisplayMode( w, h, refreshRate ) );
+			}
+		}
+	}
+
 	// now sort the modes
 	// primary key is refresh rate
 	// secondary key is area

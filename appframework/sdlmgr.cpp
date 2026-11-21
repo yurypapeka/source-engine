@@ -820,6 +820,12 @@ bool CSDLMgr::CreateHiddenGameWindow( const char *pTitle, int width, int height 
 #if defined( DX_TO_GL_ABSTRACTION )
 	flags |= SDL_WINDOW_OPENGL;
 #endif
+#ifdef OSX
+	// Get a Retina (real pixel) backbuffer. The game still sizes the window in
+	// points; the rendered frame is scaled to the drawable size on present
+	// (see DisplayedSize), so fullscreen can render above the point resolution.
+	flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+#endif
 	m_Window = SDL_CreateWindow( pTitle, x, y, width, height, flags );
 
 	if (m_Window == NULL)
@@ -1080,7 +1086,9 @@ void CSDLMgr::SetCursorPosition( int x, int y )
 {
 	SDLAPP_FUNC;
 
-	SDL_WarpMouseInWindow(m_Window, x, y);
+	// x/y are in rendered pixels; the window works in its own (point) coordinates.
+	// Inverse of the scaling applied to SDL_MOUSEMOTION events.
+	SDL_WarpMouseInWindow(m_Window, (int)( x / m_flMouseXScale ), (int)( y / m_flMouseYScale ));
 }
 
 void CSDLMgr::PostEvent( const CCocoaEvent &theEvent, bool debugEvent )
@@ -1291,7 +1299,7 @@ void CSDLMgr::ShowPixels( CShowPixelsParams *params )
 			int dstxmax = 0;
 			int dstymax = 0;
 
-			SDL_GetWindowSize(m_Window, &dstxmax, &dstymax);
+			SDL_GL_GetDrawableSize(m_Window, &dstxmax, &dstymax);	// HiDPI: pixels, not points
 
 			if (gl_blit_halfx.GetInt())
 			{
@@ -1528,6 +1536,15 @@ void CSDLMgr::SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight )
 		}
 
 		SDL_SetWindowFullscreen( m_Window, bFullScreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0 );
+
+		if ( bFullScreen )
+		{
+			// Desktop fullscreen: the window is the desktop size (in points) whatever we
+			// render at, which can now be larger than it. Keep the warp target inside it.
+			m_nMouseTargetX = mode.w / 2;
+			m_nMouseTargetY = mode.h / 2;
+			m_nWarpDelta = Max( mode.h / 3, 200 );
+		}
 
 		m_bFullScreen = bFullScreen;
 	}
@@ -2134,7 +2151,12 @@ void CSDLMgr::DisplayedSize( uint &width, uint &height )
 	SDLAPP_FUNC;
 
 	int w, h;
+#ifdef OSX
+	// HiDPI window: the GL backbuffer is in pixels, not points.
+	SDL_GL_GetDrawableSize(m_Window, &w, &h);
+#else
 	SDL_GetWindowSize(m_Window, &w, &h);
+#endif
 	width = (uint) w;
 	height = (uint) h;
 }
