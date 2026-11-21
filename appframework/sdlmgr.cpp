@@ -517,6 +517,14 @@ InitReturnVal_t CSDLMgr::Init()
 
 	if (!SDL_WasInit(SDL_INIT_VIDEO))
 	{
+#ifdef OSX
+		// Classic (non-Spaces) fullscreen: a borderless window over the whole display.
+		// Spaces fullscreen puts the window below a MacBook's camera housing, so it is
+		// shorter than the display (1470x923 vs 1470x956 points) and the frame gets
+		// squashed; this way the game also draws around the notch, with the display's
+		// proportions. SDL_VIDEO_MAC_FULLSCREEN_SPACES=1 in the environment still wins.
+		SDL_SetHintWithPriority( SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, "0", SDL_HINT_DEFAULT );
+#endif
 		if (SDL_Init(SDL_INIT_VIDEO) == -1)
 			Error( "SDL_Init(SDL_INIT_VIDEO) failed: %s", SDL_GetError() );
 
