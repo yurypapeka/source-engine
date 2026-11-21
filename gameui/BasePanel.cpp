@@ -343,6 +343,19 @@ public:
 		if( IsProportional() )
 			height = scheme()->GetProportionalScaledValue( height );
 
+		// HL2 20th Anniversary content ships MainMenu.MenuItemHeight "14" (its own
+		// menu is gamepadui), which is shorter than the item font and makes the
+		// lines of this classic menu overlap. Keep at least 1.5x the font height.
+		vgui::HFont hItemFont = pScheme->GetFont( "MainMenuFont", IsProportional() );
+		if ( !hItemFont )
+			hItemFont = pScheme->GetFont( "MenuLarge", IsProportional() );
+		if ( hItemFont )
+		{
+			int nMinHeight = vgui::surface()->GetFontTall( hItemFont ) * 3 / 2;
+			if ( height < nMinHeight )
+				height = nMinHeight;
+		}
+
 		// make fully transparent
 		SetMenuItemHeight(height);
 		SetBgColor(Color(0, 0, 0, 0));
