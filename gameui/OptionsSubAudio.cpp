@@ -17,6 +17,7 @@
 #include <vgui/IInput.h>
 #include <steam/steam_api.h>
 #include <tier1/strtools.h>
+#include "tier0/icommandline.h"
 
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -173,6 +174,15 @@ void COptionsSubAudio::OnResetData()
 	  Q_strncpy( szAvailableLanguages, steamapicontext->SteamApps()->GetAvailableGameLanguages(), sizeof(szAvailableLanguages) );
    }
 #endif
+
+   // The engine picks the spoken language with -audiolanguage when it is given (see
+   // engine/common.cpp), so show that one instead of the UI language. Without Steam
+   // the UI language is the only entry, which made Russian voices show up as "English".
+   const char *pszAudioLanguage = CommandLine()->ParmValue( "-audiolanguage", "" );
+   if ( pszAudioLanguage[0] )
+   {
+      Q_strncpy( szCurrentLanguage, pszAudioLanguage, sizeof( szCurrentLanguage ) );
+   }
 
    // Get the spoken language and store it for comparison purposes
    m_nCurrentAudioLanguage = PchLanguageToELanguage( szCurrentLanguage );
