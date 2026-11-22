@@ -2,7 +2,8 @@
 
 Ветка `hl2-anniversary-macos` позволяет играть с контентом Half-Life 2
 **после юбилейного обновления 20th Anniversary** (ноябрь 2024), включая
-Episode One, Episode Two и Lost Coast. Проверено на MacBook с M3, macOS 27.
+Episode One, Episode Two и Lost Coast, а также в нынешнюю Steam-версию Portal.
+Проверено на MacBook с M3, macOS 27.
 
 Без этих изменений модели рисуются сплошным синим и зелёным, а текст меню
 превращается в белые блоки: в юбилейной версии другие шейдеры, и старый
@@ -18,6 +19,7 @@ Episode One, Episode Two и Lost Coast. Проверено на MacBook с M3, m
 - **Шрифты.** Текст размечается как в Windows: Tahoma и Windows-размеры, без сдвига вверх. Длинные русские подписи на кнопках помещаются.
 - **Retina.** В полноэкранном режиме доступны разрешения выше «точечного» разрешения macOS (например, 1920×1248 или 2560×1664 вместо максимума 1470×956), картинка выводится в реальных пикселях. Полноэкранный режим занимает весь экран, на MacBook с вырезом камеры — и область вокруг него, так что пропорции не искажаются; в списке разрешений только режимы с пропорциями экрана (вернуть режим через Spaces: `SDL_VIDEO_MAC_FULLSCREEN_SPACES=1 ./hl2.sh ...`).
 - **Настройки мыши.** Убраны «висящие» в углу элементы джойстика: в юбилейной версии их перенесли в меню `gamepadui`.
+- **Язык озвучки в настройках.** Без Steam в Options → Audio показывался язык текста. Теперь там язык из `-audiolanguage`.
 
 ## 1. Зависимости
 
@@ -41,6 +43,10 @@ python3 waf build
 # Episode One и Episode Two: отдельная сборка в своей папке
 WAFLOCK=.lock-waf_episodic python3 waf configure -T release --prefix= --build-games=episodic -o build-episodic
 WAFLOCK=.lock-waf_episodic python3 waf build --targets=client,server
+
+# Portal: тоже отдельная сборка
+WAFLOCK=.lock-waf_portal python3 waf configure -T release --prefix= --build-games=portal -o build-portal
+WAFLOCK=.lock-waf_portal python3 waf build --targets=client,server
 ```
 
 ## 3. Файлы игры
@@ -55,8 +61,22 @@ WAFLOCK=.lock-waf_episodic python3 waf build --targets=client,server
 | `episodic` | Episode One |
 | `ep2` | Episode Two |
 | `lostcoast` | Lost Coast |
+| `portal` | Portal (из установленного через Steam Portal, см. ниже) |
 
 `hl2_complete`, `hl2mp`, `bin` и `steam_input` из Steam-версии не нужны.
+
+### Portal
+
+Portal в Steam ставится в отдельную папку, но оттуда нужна только папка
+`portal`. Положите её рядом с `hl2`. Свои `hl2`, `platform`, `bin` и
+`steam_input` у Portal можно не брать: его копия общих файлов HL2 совпадает
+с юбилейной байт в байт, и Portal берёт их из вашей папки `hl2`, как эпизоды.
+
+Английские реплики GLaDOS лежат в `portal_pak`, русские в
+`portal_sound_vo_russian`.
+
+Подойдёт только обычный Portal. Portal with RTX рассчитан на NVIDIA RTX
+Remix, который работает лишь в Windows с видеокартой RTX.
 
 ## 4. Установка собранного
 
@@ -77,10 +97,14 @@ cp build/game/client/libclient.dylib build/game/server/libserver.dylib "$GAME/hl
 # Episode One и Two используют общие библиотеки из episodic/bin
 [ -d "$GAME/episodic" ] && mkdir -p "$GAME/episodic/bin" && \
   cp build-episodic/game/client/libclient.dylib build-episodic/game/server/libserver.dylib "$GAME/episodic/bin/"
+
+# Portal
+[ -d "$GAME/portal" ] && mkdir -p "$GAME/portal/bin" && \
+  cp build-portal/game/client/libclient.dylib build-portal/game/server/libserver.dylib "$GAME/portal/bin/"
 ```
 
-В `episodic/bin` и `lostcoast/bin` из Steam лежат `client.*`, `server.*` и
-`gamepadui.*` для Windows, Linux и старых 32-битных Mac. Их можно удалить:
+В `episodic/bin`, `lostcoast/bin` и `portal/bin` из Steam лежат `client.*`,
+`server.*` и `gamepadui.*` для других систем. Их можно удалить:
 движок всё равно сначала пробует их загрузить и пишет в лог `failed to dlopen`.
 
 ### Скрипт запуска `hl2.sh`
@@ -111,6 +135,7 @@ cd ~/Desktop/"Half-Life 2"
 ./hl2.sh -game episodic       # Episode One
 ./hl2.sh -game ep2            # Episode Two
 ./hl2.sh -game lostcoast      # Lost Coast
+./hl2.sh -game portal         # Portal
 ```
 
 Полезные параметры:
@@ -142,3 +167,8 @@ cd ~/Desktop/"Half-Life 2"
   Используется классическое меню, а части запускаются по отдельности через `-game`.
 - **Шрифт GorDIN не нужен.** Им задан только `SteamDeckLoadingText`, а этот движок его не использует.
   Сообщения `Couldn't find custom font file ... GorDIN` в логе безвредны.
+- **Без Steam язык озвучки в меню не переключается.** В Options → Audio
+  виден только язык из `-audiolanguage`. Другой язык задаётся этим параметром.
+- **Portal 2 не поддерживается.** Он работает на другой, закрытой ветке движка
+  Source, поэтому собрать его из этого кода нельзя. Официальная Mac-версия
+  32-битная и на современных macOS не запускается.
