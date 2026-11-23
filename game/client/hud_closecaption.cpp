@@ -22,6 +22,7 @@
 #include "filesystem.h"
 #include "datacache/idatacache.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
+#include "tier0/icommandline.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -848,7 +849,14 @@ CHudCloseCaption::CHudCloseCaption( const char *pElementName )
 	char uilanguage[ 64 ];
 	engine->GetUILanguage( uilanguage, sizeof( uilanguage ) );
 
-	if ( !Q_stricmp( uilanguage, "english" ) )
+	// "english" tells the server which voice assets play. In other languages a group of
+	// lines that share one caption is spoken from a single combined .wav timed for the
+	// translation, instead of line by line on the English timings. That depends on the
+	// spoken language, which -audiolanguage sets apart from the text language (e.g.
+	// English text with Russian voices); without it the two are the same.
+	const char *pszAudioLanguage = CommandLine()->ParmValue( "-audiolanguage", uilanguage );
+
+	if ( !Q_stricmp( pszAudioLanguage, "english" ) )
 	{
 		english.SetValue( 1 );
 	}
