@@ -122,6 +122,22 @@ public:
 		m_pParent->SetSelectedPanel( this );
 	}
 
+	virtual void PerformLayout()
+	{
+		BaseClass::PerformLayout();
+
+		// resource/autosave is a 256x128 texture whose picture fills only its top-left
+		// 180x100; the rest is power-of-two padding. The 20th Anniversary SaveGamePanel.res
+		// scales the whole texture into the panel, which shrank the picture into the
+		// corner of its frame. Scale it so that the 180x100 part fills the panel and the
+		// padding falls outside it, where the panel clips it.
+		int wide, tall;
+		m_pAutoSaveImage->GetSize( wide, tall );
+		m_pAutoSaveImage->SetShouldScaleImage( true );
+		m_pAutoSaveImage->SetShouldCenterImage( false );
+		m_pAutoSaveImage->SetScaleAmount( (float)wide / TGA_IMAGE_PANEL_WIDTH );
+	}
+
 	virtual void ApplySchemeSettings( IScheme *pScheme )
 	{
 		m_TextColor = pScheme->GetColor( "NewGame.TextColor", Color(255, 255, 255, 255) );
